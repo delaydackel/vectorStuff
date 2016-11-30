@@ -24,12 +24,24 @@
     <ClInclude Include="targetver.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="network.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="rng.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="mnist_loader.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="vectorStuff.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="network.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
