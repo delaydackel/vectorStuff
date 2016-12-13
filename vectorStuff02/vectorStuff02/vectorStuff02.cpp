@@ -98,7 +98,7 @@ public:
 	void updateMiniBatch(const vector<vector<double>> &miniBatch, vector<vector<double>> &biases, vector<vector<vector<double>>> &weights, int learningRat);
 	//void generateMiniBatch(int miniBatchSize, const vector<vector<vector<double>>> &inputData, vector<vector<vector<double>>> &outputBatch);
 	void stochasticGradientDescent(const vector<vector<vector<double>>> &trainingData, int epochs, int miniBatchSize, int learningRate, const vector<vector<vector<double>>> &testData, vector<vector<vector<double>>>&weights, vector<vector<double>> &biases);
-	double getActivation(vector<double> &input, const vector<double> &weights, const double bias);
+	double getActivation(vector<double> &input, const vector<double> &weights);
 	void getDesiredOutput(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<double> &desiredOutput, vector<vector<double>> &listOfDesiredOutputs);
 	void getErrors(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<vector<double>> &realOutputs, const vector<vector<double>> &listOfDesiredOutputs, vector<vector<double>> &errors);
 	void getSigmoidPrime(const vector<vector<double>> &weightedInputs, vector<vector<double>> &sigmoidPrimeofZ);
@@ -423,26 +423,28 @@ void network::feedforward(const vector<vector<vector<double>>> &inWeights, const
 	//weightedInputs.push_back(inActivations[0]);
 	outActivations.push_back(inActivations[0]);
 	//split here in weighInputs() and activate()
+
+	//weighInputs
 	for (int i = 0; i < inWeights.size(); i++)
 	{
-		vector<double> layerActivations;
 		for (int j = 0; j < inWeights[i].size(); j++)
 		{
 			vector<double> z;
-			layerActivations.push_back(getActivation(outActivations[i], inWeights[i][j], inBiases[i][j]));
-
-
 			z = dotProduct(inWeights[i][j], outActivations[i]); //0 is falsch
 			weightedLayerInputs = z;
-			vector<double> sigmoids;
-
 		}
 		weightedInputs.push_back(weightedLayerInputs);
+	
+	//activate
+		vector<double> layerActivations;
+		for (int j = 0; j < inWeights[i].size(); j++)
+		{
+			layerActivations.push_back(getActivation(outActivations[i], inWeights[i][j])+ inBiases[i][j]);
+		}
 		outActivations.push_back(layerActivations);
 	}
-
 }
-double network::getActivation(vector<double> &input, const vector<double> &weights, const double bias) 
+double network::getActivation(vector<double> &input, const vector<double> &weights) 
 {
 	vector<double>outActivations;
 	double activation=0;
@@ -454,7 +456,7 @@ double network::getActivation(vector<double> &input, const vector<double> &weigh
 	{
 		activation = activation + outActivations[j];
 	}
-	return activation + bias;
+	return activation;
 }
 void network::getDesiredOutput(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<double> &desiredOutput, vector<vector<double>> &listOfDesiredOutputs) {
 	//baue element für element auf
