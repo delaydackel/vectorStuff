@@ -500,7 +500,7 @@ void network::feedforward(const vector<vector<vector<double>>> &inWeights, const
 	//weightedInputs.push_back(inActivations[0]);
 	outActivations.push_back(inActivations[0]);
 	//split here in weighInputs() and activate()
-
+	//FIX THIS
 	//weighInputs
 	for (int i = 0; i < inWeights.size(); i++)
 	{
