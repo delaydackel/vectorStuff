@@ -8,6 +8,7 @@
 #include <string>
 #include <iostream>
 #include <math.h>
+#include <algorithm>
 using namespace std;
 
 class network
@@ -95,15 +96,16 @@ public:
 	void feedforward(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, vector<vector<double>> &inActivations, vector<vector<double>> &weightedInputs, vector<vector<double>> &outActivations);
 	void backdrop(const int &miniBatchSize,const int &learningRate, vector<double> &activationsFromPreviousLayer, vector<double> &desiredOutput, vector<vector<vector<double>>> &inWeights, vector<vector<double>> &inBiases, vector<vector<double>> &nabla_biases, vector<vector<vector<double>>> &nabla_weights);
 	vector<vector<double>> vectorizeLabels(const vector<double> &labels);
-	void updateMiniBatch(const vector<vector<double>> &miniBatch, const int &miniBatchSize, vector<vector<double>> &biases, vector<vector<vector<double>>> &weights, int learningRat);
+	void updateMiniBatch(const vector<vector<double>> &miniBatch, const int &miniBatchSize, vector<vector<double>> &biases, vector<vector<vector<double>>> &weights, int learningRat, vector<vector<double>> &nabla_biases, vector<vector<vector<double>>> &nabla_weights);
 	//void generateMiniBatch(int miniBatchSize, const vector<vector<vector<double>>> &inputData, vector<vector<vector<double>>> &outputBatch);
 	void stochasticGradientDescent(const vector<vector<vector<double>>> &trainingData, int epochs, int miniBatchSize, int learningRate, const vector<vector<vector<double>>> &testData, vector<vector<vector<double>>>&weights, vector<vector<double>> &biases);
 	double weightInput(vector<double> &input, const vector<double> &weights);
 	void getDesiredOutput(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<double> &desiredOutput, vector<vector<double>> &listOfDesiredOutputs);
 	void getErrors(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<vector<double>> &realOutputs, const vector<vector<double>> &listOfDesiredOutputs, vector<vector<double>> &errors);
 	void getSigmoidPrime(const vector<vector<double>> &weightedInputs, vector<vector<double>> &sigmoidPrimeofZ);
-	void getDelta(const vector<vector<double>> &costs, const vector<vector<double>> &sigmoidPrimeOfZ, vector<double> &delta);
-	void getNablaWeights(const vector<double> &delta, const vector<vector<double>> &listOfActivations, vector<vector<vector<double>>> &nabla_weights);
+	void getDelta(const vector<vector<double>> &costs, const vector<vector<double>> &sigmoidPrimeOfZ, vector<vector<double>> &delta);
+	void getNablaWeights(const vector<vector<double>> &delta, const vector<vector<double>> &listOfActivations, vector<vector<vector<double>>> &nabla_weights);
+	void evaluate();
 	
 
 };
@@ -213,6 +215,8 @@ vector<int> getNetworkSize()
 }
 double sigmoid(double z)
 {
+	double blub;
+	blub = (1.0 / (1.0 + (exp(-z))));
 	return (1.0 / (1.0 + (exp(-z))));
 	/*
 	double x;
@@ -337,7 +341,18 @@ double sumOfDotProduct(const vector<double> &a, const vector<double> &b)
 	}
 	return x;
 }
-
+int posOfHighestElement(const vector<double> &a) {
+	auto highestElement = max_element(begin(a), end(a));
+	auto posOfHighestElementInVector = distance(begin(a), highestElement);
+	return posOfHighestElementInVector;
+}
+bool hasSameHighestElement(const vector<double> &a, const vector<double> &b){
+	if (posOfHighestElement(a) == posOfHighestElement(b))
+	{
+		return true;
+	}
+	return false;
+}
 vector<double> fillVecWithZeroes(vector<double> &inVec) {
 	vector<double> outVec;
 	for (int i=0; i< inVec.size(); i++)
@@ -364,11 +379,7 @@ void network::backdrop(const int &miniBatchSize, const int &learningRate, vector
 	vector<vector<double>> sigmoidPrimeOfZ;
 	vector<vector<double>> costs; //costs, errors, wuteva
 	vector<vector<double>> listOfDesiredOutputs;
-	vector<vector<double>> delta_nabla_biases;
-	vector<vector<vector<double>>> delta_nabla_weights;
-	vector<vector<double>> new_biases;
-	vector<vector<vector<double>>> new_weights;
-	vector<double> delta;
+	vector<vector<double>> delta;
 	
 	//vector<vector<double>> blub;
 	listOfActivations.push_back(activationsFromPreviousLayer);
@@ -387,22 +398,24 @@ void network::backdrop(const int &miniBatchSize, const int &learningRate, vector
 
 	//get SigmoidPrime of Zs via Zs from last Layer to calculate derivative of costs ()
 	//for each (vector<double> layerActivation in calculatedActivations)
-	getSigmoidPrime(weightedInputs, sigmoidPrimeOfZ); //HIER GEHTS WEITER
+	getSigmoidPrime(weightedInputs, sigmoidPrimeOfZ); 
 	
 	//delta= costs[vorletztes layer] * sigmoidPrimeOfZ[vorletztes layer]
 
 	getDelta(costs, sigmoidPrimeOfZ, delta);
 
-	nabla_biases[nabla_biases.size() - 2] = delta;
+	//nabla_biases[nabla_biases.size() - 2] = delta[0];
+	for (int i = 1; i < nabla_biases.size(); i++)
+	{
+		nabla_biases[i] = delta[i - 1];
+	}
 	getNablaWeights(delta, listOfActivations, nabla_weights);
 	//nabla_weights[nabla_weights.size() - 2] = dotProduct(delta, listOfActivations[listOfActivations.size()-2]);
 
 
-	delta_nabla_biases = nabla_biases;
-	delta_nabla_weights = nabla_weights;
-	new_biases = nabla_biases;
-	new_weights = nabla_weights;
 
+
+	/*
 	//edit biases
 	for (int i = 0; i < new_biases.size(); i++)
 	{
@@ -435,48 +448,76 @@ void network::backdrop(const int &miniBatchSize, const int &learningRate, vector
 				new_weights[i][j][k] = ((new_weights[i][j][k] - (learningRate / miniBatchSize))*nabla_weights[i][j][k]);
 			}			
 		}
-	}
-	inWeights = new_weights;
-	inBiases = new_biases;
-
-
+	}*/
 }
-void network::updateMiniBatch(const vector<vector<double>> &dataSet, const int &miniBatchSize, vector<vector<double>> &biases, vector<vector<vector<double>>> &weights, int learningRate)
+void network::updateMiniBatch(const vector<vector<double>> &dataSet, const int &miniBatchSize, vector<vector<double>> &biases, vector<vector<vector<double>>> &weights, int learningRate, vector<vector<double>> &nabla_biases, vector<vector<vector<double>>> &nabla_weights)
 {
-	
-	vector<vector<double>> nabla_biases(biases);
-	vector<vector<vector<double>>> nabla_weights(weights);
-
-	for (int i = 0; i < nabla_biases.size(); i++)
-	{
-		nabla_biases[i] = fillVecWithZeroes(nabla_biases[i]);
-	}
-	for (int k = 0; k < nabla_weights.size(); k++)
-	{
-		for (int j = 0;  j< weights[k].size(); j++)
-		{
-			nabla_weights[k][j]=fillVecWithZeroes(nabla_weights[k][j]);
-		}
-	}
 
 	for (int i = 0; i < miniBatchSize; i++) //muss noch minibatch_size werden
 	{
+		vector<vector<double>> delta_nabla_biases;
+		vector<vector<vector<double>>> delta_nabla_weights;
+		vector<vector<double>> new_biases;
+		vector<vector<vector<double>>> new_weights;
 		//vectors delta__nabla_weights, delta_nabla_biases = output of backdrop
 		//vector<double> x;
 		vector<double>activationsAtInputLayer(dataSet[0]);
 		vector<double>output(dataSet[1]);
-		network::backdrop(miniBatchSize,learningRate, activationsAtInputLayer, output, weights, biases, nabla_biases, nabla_weights);
-		
-	}
-	//biases = (bias-(learningRate/))
 
-	
+		network::backdrop(miniBatchSize,learningRate, activationsAtInputLayer, output, weights, biases, nabla_biases, nabla_weights);
+		delta_nabla_biases = nabla_biases;
+		delta_nabla_weights = nabla_weights;
+
+
+		
+		//edit nabla_biases
+		for (int i = 0; i < biases.size(); i++)
+		{
+			nabla_biases[i] = sumPerElement(nabla_biases[i], delta_nabla_biases[i]);
+		}
+		//edit nabla_weights
+		for (int i = 0; i < weights.size(); i++)
+		{
+			for (int j = 0; j<weights[i].size(); j++)
+			{
+				nabla_weights[i][j] = sumPerElement(nabla_weights[i][j], delta_nabla_weights[i][j]);
+			}
+		}
+	}
+
+	//edit biases
+	for (int i = 0; i < biases.size(); i++)
+	{
+		for (int j = 0; j < biases[i].size(); j++)
+		{
+			biases[i][j] = ((biases[i][j] - (learningRate / miniBatchSize))*nabla_biases[i][j]);//w-(eta/length)*nablaW
+		}
+
+	}
+	//edit weights
+	for (int i = 0; i < weights.size(); i++)
+	{
+		for (int j = 0; j < weights[i].size(); j++)
+		{
+			for (int k = 0; k < weights[i][j].size(); k++)
+			{
+				weights[i][j][k] = ((weights[i][j][k] - (learningRate / miniBatchSize))*nabla_weights[i][j][k]);
+			}
+		}
+	}
+
 }
 void generateMiniBatch(int miniBatchSize, const vector<vector<vector<double>>> &inputData, vector<vector<vector<double>>> &outputBatch){
 	for (int i = 0; i < miniBatchSize; i++)
 	{
 		int j = 0;
 		j = rngInt(0,inputData.size());
+		/*
+		cout << posOfHighestElement(inputData[j][1]) << endl;
+		if (hasSameHighestElement(inputData[j][1], inputData[j][1])) {
+			cout << "yay"<< endl;
+		}
+		*/
 		outputBatch.push_back(inputData[j]);//pick random datasets from input
 	}
 }
@@ -486,11 +527,26 @@ void network::stochasticGradientDescent(const vector<vector<vector<double>>> &tr
 	{
 		vector<vector<vector<double>>> miniBatch;
 		generateMiniBatch(miniBatchSize, trainingData, miniBatch);
-		for each (vector<vector<double>> dataSet in miniBatch)
+
+		vector<vector<double>> nabla_biases(biases);
+		vector<vector<vector<double>>> nabla_weights(weights);
+
+
+		for (int i = 0; i < nabla_biases.size(); i++)
 		{
-			
-			
-			updateMiniBatch(dataSet, miniBatchSize, biases,weights,learningRate);
+			nabla_biases[i] = fillVecWithZeroes(nabla_biases[i]);
+		}
+		for (int k = 0; k < nabla_weights.size(); k++)
+		{
+			for (int j = 0; j< weights[k].size(); j++)
+			{
+				nabla_weights[k][j] = fillVecWithZeroes(nabla_weights[k][j]);
+			}
+		}
+
+		for each (vector<vector<double>> dataSet in miniBatch)
+		{		
+			updateMiniBatch(dataSet, miniBatchSize, biases,weights,learningRate,nabla_biases,nabla_weights);
 			//updateMiniBatch(vector<vector<double>> &dataSet, vector<vector<double>> &biases, vector<vector<vector<double>>> &weights, int learningRate)
 			//ladida
 		}
@@ -503,7 +559,6 @@ void network::feedforward(const vector<vector<vector<double>>> &inWeights, const
 	weightedInputs.push_back(inActivations[0]);
 	outActivations.push_back(inActivations[0]);
 	//split here in weighInputs() and activate()
-	//FIX THIS
 	//weighInputs
 	for (int i = 0; i < inWeights.size(); i++)
 	{
@@ -535,17 +590,18 @@ void network::feedforward(const vector<vector<vector<double>>> &inWeights, const
 }
 double network::weightInput(vector<double> &input, const vector<double> &weights) 
 {
-	vector<double>outActivations;
-	double activation=0;
-	for (int i = 0; i < input.size(); i++)
+	//vector<double>outActivations;
+	//double activation=0;
+	double weightedInput = sumOfDotProduct(input, weights);
+	/*for (int i = 0; i < input.size(); i++)
 	{
 		outActivations.push_back((input[i] * weights[i]));
 	}
 	for (int j = 0; j < outActivations.size(); j++)
 	{
 		activation = activation + outActivations[j];
-	}
-	return activation;
+	}*/
+	return weightedInput;
 }
 void network::getDesiredOutput(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<double> &desiredOutput, vector<vector<double>> &listOfDesiredOutputs) {
 	//baue element für element auf
@@ -597,22 +653,31 @@ void network::getSigmoidPrime(const vector<vector<double>> &weightedInputs, vect
 		sigmoidPrimeOfZ.push_back(blub);
 	}
 }
-void network::getDelta(const vector<vector<double>> &costs, const vector<vector<double>> &sigmoidPrimeOfZ, vector<double> &delta) {
-	for (int i = 0; i < costs[costs.size()-2].size(); i++)
-	{
+void network::getDelta(const vector<vector<double>> &costs, const vector<vector<double>> &sigmoidPrimeOfZ, vector<vector<double>> &delta) {
+	for (int i = 0; i < costs.size(); i++)
+	{	
+		vector<double> deltaPerLayer;
+		for (int j = 0; j < costs[i].size(); j++)
+		{
+
+			double deltaPerNode = 0;
+			deltaPerNode = costs[i][j] * sigmoidPrimeOfZ[i+1][j];
+			deltaPerLayer.push_back(deltaPerNode);
+		}
+		/*
 		double deltaPerNode = 0;
-		deltaPerNode = costs[costs.size()-2][i] * sigmoidPrimeOfZ[costs.size() - 2][i];
-		delta.push_back(deltaPerNode);
+		deltaPerNode = costs[costs.size()-2][i] * sigmoidPrimeOfZ[costs.size() - 2][i];*/
+		delta.push_back(deltaPerLayer);
 	}
 
 }
-void network::getNablaWeights(const vector<double> &delta, const vector<vector<double>> &listOfActivations, vector<vector<vector<double>>> &nabla_weights) {
+void network::getNablaWeights(const vector<vector<double>> &delta, const vector<vector<double>> &listOfActivations, vector<vector<vector<double>>> &nabla_weights) {
 	for (int i = 1; i < listOfActivations.size()-2; i++)
 	{
 		//nabla_weights[i-1]
 		for (int j = 0; j < nabla_weights[i-1].size() ; j++)
 		{
-			nabla_weights[i - 1][j]=(dotProduct(delta, listOfActivations[listOfActivations.size() - 2]));
+			nabla_weights[i - 1][j]=(dotProduct(delta[i], listOfActivations[listOfActivations.size() - 2]));
 		}
 	}
 
@@ -622,7 +687,7 @@ int main()
 
 	int epochs = 5;
 	int miniBatchSize = 10;
-	int learningRate = 3;
+	int learningRate = 1;
 	//vector<double> hyperParam{ epochs, miniBatchSize, learningRate };
 
 	vector<vector<double>> allImageData;
@@ -650,6 +715,7 @@ int main()
 	vector<vector<vector<double>>> sample;
 	//net.print(trainingData);
 	net.stochasticGradientDescent(trainingData, epochs, miniBatchSize,learningRate,trainingData, weights, biases);
+	//net.evalute();
 	//stochasticGradientDescent(const vector<vector<vector<double>>> &trainingData, int epochs, int miniBatchSize, int learningRate, const vector<vector<vector<double>>> &testData)
 	//net.print(net.vectorizeLabels(labels));
 	//net.print(trainingData);
