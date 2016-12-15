@@ -15,7 +15,12 @@ double rngDouble() {
 	double x = ((double)rand() / (RAND_MAX));
 	return x;
 }
-int rngInt() {
-	int x = ((int)rand() / (RAND_MAX));
-	return x;
+int rngInt(int min, int max) {
+	std::random_device rd;     // only used once to initialise (seed) engine
+	std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
+	std::uniform_int_distribution<int> uni(min, max); // guaranteed unbiased
+	auto random_integer = uni(rng);
+	//int x = ((int)rand() / (RAND_MAX));
+	//std::cout << x << endl;
+	return random_integer;
 }
