@@ -411,10 +411,6 @@ void network::backdrop(const int &miniBatchSize, const int &learningRate, vector
 	}
 	getNablaWeights(delta, listOfActivations, nabla_weights);
 	//nabla_weights[nabla_weights.size() - 2] = dotProduct(delta, listOfActivations[listOfActivations.size()-2]);
-
-
-
-
 	/*
 	//edit biases
 	for (int i = 0; i < new_biases.size(); i++)
@@ -455,6 +451,7 @@ void network::updateMiniBatch(const vector<vector<double>> &dataSet, const int &
 
 	for (int i = 0; i < miniBatchSize; i++) //muss noch minibatch_size werden
 	{
+		
 		vector<vector<double>> delta_nabla_biases;
 		vector<vector<vector<double>>> delta_nabla_weights;
 		vector<vector<double>> new_biases;
@@ -473,7 +470,9 @@ void network::updateMiniBatch(const vector<vector<double>> &dataSet, const int &
 		//edit nabla_biases
 		for (int i = 0; i < biases.size(); i++)
 		{
-			nabla_biases[i] = sumPerElement(nabla_biases[i], delta_nabla_biases[i]);
+			vector<double> blub;
+			blub = sumPerElement(nabla_biases[i], delta_nabla_biases[i]);
+			nabla_biases[i] = blub;
 		}
 		//edit nabla_weights
 		for (int i = 0; i < weights.size(); i++)
@@ -490,7 +489,7 @@ void network::updateMiniBatch(const vector<vector<double>> &dataSet, const int &
 	{
 		for (int j = 0; j < biases[i].size(); j++)
 		{
-			biases[i][j] = ((biases[i][j] - (learningRate / miniBatchSize))*nabla_biases[i][j]);//w-(eta/length)*nablaW
+			biases[i][j] = (biases[i][j] - ((learningRate / miniBatchSize)*nabla_biases[i][j]));//w-(eta/length)*nablaW
 		}
 
 	}
@@ -501,10 +500,11 @@ void network::updateMiniBatch(const vector<vector<double>> &dataSet, const int &
 		{
 			for (int k = 0; k < weights[i][j].size(); k++)
 			{
-				weights[i][j][k] = ((weights[i][j][k] - (learningRate / miniBatchSize))*nabla_weights[i][j][k]);
+				weights[i][j][k] = (weights[i][j][k] - ((learningRate / miniBatchSize)*nabla_weights[i][j][k]));
 			}
 		}
 	}
+	print(biases[biases.size() - 1]);
 
 }
 void generateMiniBatch(int miniBatchSize, const vector<vector<vector<double>>> &inputData, vector<vector<vector<double>>> &outputBatch){
@@ -544,20 +544,28 @@ void network::stochasticGradientDescent(const vector<vector<vector<double>>> &tr
 			}
 		}
 
-		for each (vector<vector<double>> dataSet in miniBatch)
-		{		
-			updateMiniBatch(dataSet, miniBatchSize, biases,weights,learningRate,nabla_biases,nabla_weights);
-			//updateMiniBatch(vector<vector<double>> &dataSet, vector<vector<double>> &biases, vector<vector<vector<double>>> &weights, int learningRate)
-			//ladida
-		}
+	
+		for (int i = 0; i < miniBatchSize; i++)
+		{
+			updateMiniBatch(miniBatch[i], miniBatchSize, biases, weights, learningRate, nabla_biases, nabla_weights);
+		}				
+		//updateMiniBatch(vector<vector<double>> &dataSet, vector<vector<double>> &biases, vector<vector<vector<double>>> &weights, int learningRate)
+		//ladida
+		//print(biases[biases.size() - 1]);		
+		cout << endl;
 	}
-
+	
 }
 void network::feedforward(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, vector<vector<double>> &inActivations, vector<vector<double>> &weightedInputs, vector<vector<double>> &outActivations)
 {
 	
 	weightedInputs.push_back(inActivations[0]);
 	outActivations.push_back(inActivations[0]);
+	for (int i = 0; i < outActivations[0].size(); i++)
+	{	
+			weightedInputs[0][i] = (weightedInputs[0][i]/255);
+			outActivations[0][i] = (outActivations[0][i]/255);
+	}
 	//split here in weighInputs() and activate()
 	//weighInputs
 	for (int i = 0; i < inWeights.size(); i++)
@@ -570,7 +578,7 @@ void network::feedforward(const vector<vector<vector<double>>> &inWeights, const
 				double blub;
 				blub += inWeights[i][j][k];
 			}*/
-			weightedLayerInputs.push_back(weightInput(weightedInputs[i], inWeights[i][j]) + inBiases[i][j]);
+			weightedLayerInputs.push_back(weightInput(outActivations[i], inWeights[i][j]) + inBiases[i][j]);
 			/*
 			double z;
 			z = sumOfDotProduct(inWeights[i][j], outActivations[i]); //0 is falsch
@@ -580,6 +588,7 @@ void network::feedforward(const vector<vector<vector<double>>> &inWeights, const
 		weightedInputs.push_back(weightedLayerInputs);
 	
 	//activate
+
 		vector<double> layerActivations;
 		for (int j = 0; j < inWeights[i].size(); j++)
 		{
@@ -592,7 +601,7 @@ double network::weightInput(vector<double> &input, const vector<double> &weights
 {
 	//vector<double>outActivations;
 	//double activation=0;
-	double weightedInput = sumOfDotProduct(input, weights);
+	double weightedInput = sumOfDotProduct(input, weights)/(weights.size()*2);
 	/*for (int i = 0; i < input.size(); i++)
 	{
 		outActivations.push_back((input[i] * weights[i]));
@@ -687,7 +696,7 @@ int main()
 
 	int epochs = 5;
 	int miniBatchSize = 10;
-	int learningRate = 1;
+	int learningRate = 3;
 	//vector<double> hyperParam{ epochs, miniBatchSize, learningRate };
 
 	vector<vector<double>> allImageData;
