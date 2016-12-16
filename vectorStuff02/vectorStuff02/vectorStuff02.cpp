@@ -37,7 +37,8 @@ public:
 		cout << "\n";
 		for (int i = 0; i < dVec.size(); i++)
 		{
-			cout << "Element " << i << ": " << dVec[i] << ", ";
+			cout << dVec[i]<<", ";
+		//	cout << "Element " << i << ": " << dVec[i] << ", ";
 		}
 	}	
 	void print(vector<vector<double>> tupleVec) {
@@ -504,7 +505,7 @@ void network::updateMiniBatch(const vector<vector<double>> &dataSet, const int &
 			}
 		}
 	}
-	print(biases[biases.size() - 1]);
+	
 
 }
 void generateMiniBatch(int miniBatchSize, const vector<vector<vector<double>>> &inputData, vector<vector<vector<double>>> &outputBatch){
@@ -551,7 +552,12 @@ void network::stochasticGradientDescent(const vector<vector<vector<double>>> &tr
 		}				
 		//updateMiniBatch(vector<vector<double>> &dataSet, vector<vector<double>> &biases, vector<vector<vector<double>>> &weights, int learningRate)
 		//ladida
-		//print(biases[biases.size() - 1]);		
+		//print(biases[biases.size() - 1]);
+		//print(biases);
+		cout << "biases: " << endl;
+		print(biases[1]);
+		cout << endl;
+		print(biases[2]);
 		cout << endl;
 	}
 	
@@ -578,7 +584,7 @@ void network::feedforward(const vector<vector<vector<double>>> &inWeights, const
 				double blub;
 				blub += inWeights[i][j][k];
 			}*/
-			weightedLayerInputs.push_back(weightInput(outActivations[i], inWeights[i][j]) + inBiases[i][j]);
+			weightedLayerInputs.push_back(weightInput(outActivations[i], inWeights[i][j]) - inBiases[i][j]);
 			/*
 			double z;
 			z = sumOfDotProduct(inWeights[i][j], outActivations[i]); //0 is falsch
@@ -601,7 +607,7 @@ double network::weightInput(vector<double> &input, const vector<double> &weights
 {
 	//vector<double>outActivations;
 	//double activation=0;
-	double weightedInput = sumOfDotProduct(input, weights)/(weights.size()*2);
+	double weightedInput = sumOfDotProduct(input, weights)/*/(weights.size()*2)*/;
 	/*for (int i = 0; i < input.size(); i++)
 	{
 		outActivations.push_back((input[i] * weights[i]));
@@ -694,9 +700,9 @@ void network::getNablaWeights(const vector<vector<double>> &delta, const vector<
 int main()
 {
 
-	int epochs = 5;
+	int epochs = 20;
 	int miniBatchSize = 10;
-	int learningRate = 3;
+	int learningRate = 50;
 	//vector<double> hyperParam{ epochs, miniBatchSize, learningRate };
 
 	vector<vector<double>> allImageData;
