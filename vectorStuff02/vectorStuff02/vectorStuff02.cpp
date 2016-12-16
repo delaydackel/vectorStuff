@@ -102,11 +102,11 @@ public:
 	void stochasticGradientDescent(const vector<vector<vector<double>>> &trainingData, int epochs, int miniBatchSize, int learningRate, const vector<vector<vector<double>>> &testData, vector<vector<vector<double>>>&weights, vector<vector<double>> &biases);
 	double weightInput(vector<double> &input, const vector<double> &weights);
 	void getDesiredOutput(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<double> &desiredOutput, vector<vector<double>> &listOfDesiredOutputs);
-	void getErrors(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<vector<double>> &realOutputs, const vector<vector<double>> &listOfDesiredOutputs, vector<vector<double>> &errors);
+	void getErrors(const vector<vector<double>> &realOutputs, const vector<vector<double>> &listOfDesiredOutputs, vector<vector<double>> &errors);
 	void getSigmoidPrime(const vector<vector<double>> &weightedInputs, vector<vector<double>> &sigmoidPrimeofZ);
 	void getDelta(const vector<vector<double>> &costs, const vector<vector<double>> &sigmoidPrimeOfZ, vector<vector<double>> &delta);
 	void getNablaWeights(const vector<vector<double>> &delta, const vector<vector<double>> &listOfActivations, vector<vector<vector<double>>> &nabla_weights);
-	void evaluate();
+	void evaluate(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<vector<vector<double>>> &inputData);
 	
 
 };
@@ -394,7 +394,7 @@ void network::backdrop(const int &miniBatchSize, const int &learningRate, vector
 	//***backward pass***
 	getDesiredOutput(inWeights, inBiases, desiredOutput, listOfDesiredOutputs);
 	//get costs
-	getErrors(inWeights, inBiases,listOfActivations, listOfDesiredOutputs, costs);// compare activations to desiredOutputs
+	getErrors(listOfActivations, listOfDesiredOutputs, costs);// compare activations to desiredOutputs
 	//secondToLast = myVector[myVector.size() - 2];
 
 	//get SigmoidPrime of Zs via Zs from last Layer to calculate derivative of costs ()
@@ -402,7 +402,12 @@ void network::backdrop(const int &miniBatchSize, const int &learningRate, vector
 	getSigmoidPrime(weightedInputs, sigmoidPrimeOfZ); 
 	
 	//delta= costs[vorletztes layer] * sigmoidPrimeOfZ[vorletztes layer]
-
+	vector<double> deltaLastLayer;
+	for (int i = 0; i < costs[costs.size()-1].size(); i++)
+	{
+		deltaLastLayer.push_back(costs[costs.size() - 1][i] * sigmoidPrimeOfZ[sigmoidPrimeOfZ.size()-1][i]);
+	}
+	delta.push_back(deltaLastLayer);
 	getDelta(costs, sigmoidPrimeOfZ, delta);
 
 	//nabla_biases[nabla_biases.size() - 2] = delta[0];
@@ -410,7 +415,7 @@ void network::backdrop(const int &miniBatchSize, const int &learningRate, vector
 	{
 		nabla_biases[i] = delta[i - 1];
 	}
-	getNablaWeights(delta, listOfActivations, nabla_weights);
+	getNablaWeights(delta, listOfActivations, nabla_weights);//broken?
 	//nabla_weights[nabla_weights.size() - 2] = dotProduct(delta, listOfActivations[listOfActivations.size()-2]);
 	/*
 	//edit biases
@@ -449,10 +454,8 @@ void network::backdrop(const int &miniBatchSize, const int &learningRate, vector
 }
 void network::updateMiniBatch(const vector<vector<double>> &dataSet, const int &miniBatchSize, vector<vector<double>> &biases, vector<vector<vector<double>>> &weights, int learningRate, vector<vector<double>> &nabla_biases, vector<vector<vector<double>>> &nabla_weights)
 {
-
 	for (int i = 0; i < miniBatchSize; i++) //muss noch minibatch_size werden
 	{
-		
 		vector<vector<double>> delta_nabla_biases;
 		vector<vector<vector<double>>> delta_nabla_weights;
 		vector<vector<double>> new_biases;
@@ -462,12 +465,12 @@ void network::updateMiniBatch(const vector<vector<double>> &dataSet, const int &
 		vector<double>activationsAtInputLayer(dataSet[0]);
 		vector<double>output(dataSet[1]);
 
-		network::backdrop(miniBatchSize,learningRate, activationsAtInputLayer, output, weights, biases, nabla_biases, nabla_weights);
+		network::backdrop(miniBatchSize, learningRate, activationsAtInputLayer, output, weights, biases, nabla_biases, nabla_weights);
 		delta_nabla_biases = nabla_biases;
 		delta_nabla_weights = nabla_weights;
 
 
-		
+
 		//edit nabla_biases
 		for (int i = 0; i < biases.size(); i++)
 		{
@@ -478,35 +481,32 @@ void network::updateMiniBatch(const vector<vector<double>> &dataSet, const int &
 		//edit nabla_weights
 		for (int i = 0; i < weights.size(); i++)
 		{
-			for (int j = 0; j<weights[i].size(); j++)
+			for (int j = 0; j < weights[i].size(); j++)
 			{
 				nabla_weights[i][j] = sumPerElement(nabla_weights[i][j], delta_nabla_weights[i][j]);
 			}
 		}
-	}
-
-	//edit biases
-	for (int i = 0; i < biases.size(); i++)
-	{
-		for (int j = 0; j < biases[i].size(); j++)
+		//edit biases
+		for (int i = 0; i < biases.size(); i++)
 		{
-			biases[i][j] = (biases[i][j] - ((learningRate / miniBatchSize)*nabla_biases[i][j]));//w-(eta/length)*nablaW
-		}
-
-	}
-	//edit weights
-	for (int i = 0; i < weights.size(); i++)
-	{
-		for (int j = 0; j < weights[i].size(); j++)
-		{
-			for (int k = 0; k < weights[i][j].size(); k++)
+			for (int j = 0; j < biases[i].size(); j++)
 			{
-				weights[i][j][k] = (weights[i][j][k] - ((learningRate / miniBatchSize)*nabla_weights[i][j][k]));
+				biases[i][j] = biases[i][j] - ((learningRate / miniBatchSize)*nabla_biases[i][j]);//w-(eta/length)*nablaW
+			}
+		}
+		//edit weights
+		for (int i = 0; i < weights.size(); i++)
+		{
+			for (int j = 0; j < weights[i].size(); j++)
+			{
+				for (int k = 0; k < weights[i][j].size(); k++)
+				{
+					weights[i][j][k] = weights[i][j][k] - ((learningRate / miniBatchSize)*nabla_weights[i][j][k]);
+				}
 			}
 		}
 	}
 	
-
 }
 void generateMiniBatch(int miniBatchSize, const vector<vector<vector<double>>> &inputData, vector<vector<vector<double>>> &outputBatch){
 	for (int i = 0; i < miniBatchSize; i++)
@@ -559,19 +559,18 @@ void network::stochasticGradientDescent(const vector<vector<vector<double>>> &tr
 		cout << endl;
 		print(biases[2]);
 		cout << endl;
+		evaluate(weights, biases, trainingData);
 	}
 	
 }
 void network::feedforward(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, vector<vector<double>> &inActivations, vector<vector<double>> &weightedInputs, vector<vector<double>> &outActivations)
-{
-	
+{	
 	weightedInputs.push_back(inActivations[0]);
-	outActivations.push_back(inActivations[0]);
-	for (int i = 0; i < outActivations[0].size(); i++)
+	for (int i = 0; i < weightedInputs[0].size(); i++)
 	{	
-			weightedInputs[0][i] = (weightedInputs[0][i]/255);
-			outActivations[0][i] = (outActivations[0][i]/255);
+			weightedInputs[0][i] = (weightedInputs[0][i]/255);			
 	}
+	outActivations.push_back(weightedInputs[0]);
 	//split here in weighInputs() and activate()
 	//weighInputs
 	for (int i = 0; i < inWeights.size(); i++)
@@ -584,7 +583,7 @@ void network::feedforward(const vector<vector<vector<double>>> &inWeights, const
 				double blub;
 				blub += inWeights[i][j][k];
 			}*/
-			weightedLayerInputs.push_back(weightInput(outActivations[i], inWeights[i][j]) - inBiases[i][j]);
+			weightedLayerInputs.push_back(weightInput(weightedInputs[i], inWeights[i][j]) + inBiases[i][j]);
 			/*
 			double z;
 			z = sumOfDotProduct(inWeights[i][j], outActivations[i]); //0 is falsch
@@ -607,7 +606,7 @@ double network::weightInput(vector<double> &input, const vector<double> &weights
 {
 	//vector<double>outActivations;
 	//double activation=0;
-	double weightedInput = sumOfDotProduct(input, weights)/*/(weights.size()*2)*/;
+	double weightedInput = sumOfDotProduct(input, weights)/*/(weights.size())*/;
 	/*for (int i = 0; i < input.size(); i++)
 	{
 		outActivations.push_back((input[i] * weights[i]));
@@ -640,7 +639,7 @@ void network::getDesiredOutput(const vector<vector<vector<double>>> &inWeights, 
 		listOfDesiredOutputs.insert(listOfDesiredOutputs.begin(), previousLayerDesiredOutput);
 	}
 }
-void network::getErrors(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases,const vector<vector<double>> &realOutputs, const vector<vector<double>> &listOfDesiredOutputs, vector<vector<double>> &errors) {
+void network::getErrors(const vector<vector<double>> &realOutputs, const vector<vector<double>> &listOfDesiredOutputs, vector<vector<double>> &errors) {
 	//get errors per layer, starting with last layer
 	for (int i = 1; i < realOutputs.size(); i++)
 	{
@@ -669,12 +668,11 @@ void network::getSigmoidPrime(const vector<vector<double>> &weightedInputs, vect
 	}
 }
 void network::getDelta(const vector<vector<double>> &costs, const vector<vector<double>> &sigmoidPrimeOfZ, vector<vector<double>> &delta) {
-	for (int i = 0; i < costs.size(); i++)
+	for (int i = 0; i < costs.size()-1; i++)
 	{	
 		vector<double> deltaPerLayer;
 		for (int j = 0; j < costs[i].size(); j++)
 		{
-
 			double deltaPerNode = 0;
 			deltaPerNode = costs[i][j] * sigmoidPrimeOfZ[i+1][j];
 			deltaPerLayer.push_back(deltaPerNode);
@@ -682,9 +680,9 @@ void network::getDelta(const vector<vector<double>> &costs, const vector<vector<
 		/*
 		double deltaPerNode = 0;
 		deltaPerNode = costs[costs.size()-2][i] * sigmoidPrimeOfZ[costs.size() - 2][i];*/
-		delta.push_back(deltaPerLayer);
+		//delta.push_back(deltaPerLayer);
+		delta.insert(delta.begin(), deltaPerLayer);
 	}
-
 }
 void network::getNablaWeights(const vector<vector<double>> &delta, const vector<vector<double>> &listOfActivations, vector<vector<vector<double>>> &nabla_weights) {
 	for (int i = 1; i < listOfActivations.size()-2; i++)
@@ -692,26 +690,51 @@ void network::getNablaWeights(const vector<vector<double>> &delta, const vector<
 		//nabla_weights[i-1]
 		for (int j = 0; j < nabla_weights[i-1].size() ; j++)
 		{
-			nabla_weights[i - 1][j]=(dotProduct(delta[i], listOfActivations[listOfActivations.size() - 2]));
+
+				nabla_weights[i - 1][j] = (dotProduct(delta[i], listOfActivations[i]));
+					
 		}
 	}
 
 }
+void network::evaluate(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<vector<vector<double>>> &inputData) {
+	vector<vector<vector<double>>> testSample;
+	generateMiniBatch(10, inputData, testSample);
+	double numberOfSuccess=0;
+	for (int i = 0; i < testSample.size(); i++)
+	{	
+		vector<vector<double>> result;
+		vector<vector<double>> blub;
+		feedforward(inWeights,inBiases,testSample[i], result, blub);
+		if (hasSameHighestElement(testSample[i][1], result[result.size()-1]))
+		{
+			cout << "isSame";
+			numberOfSuccess++;
+
+		}
+	}
+	cout << "success rate: " << numberOfSuccess / 10<<endl;
+}
 int main()
 {
 
-	int epochs = 20;
+	int epochs = 50;
 	int miniBatchSize = 10;
-	int learningRate = 50;
+	int learningRate = 3000000;
 	//vector<double> hyperParam{ epochs, miniBatchSize, learningRate };
 
-	vector<vector<double>> allImageData;
-	ReadMNISTImages(10000, 784, allImageData);
+	vector<vector<double>> trainingImageData;
+	ReadMNISTImages(10000, 784, trainingImageData);
 	vector<double> labels;
 	ReadMNISTLabels(10000, labels);
 	vector<int> networkSize;
 	networkSize = getNetworkSize();
 	network net{  };
+	vector<vector<vector<double>>> trainingData;
+	vector<vector<double>> vectorizedTrainingLabels;
+	vectorizedTrainingLabels = net.vectorizeLabels(labels);
+	zip(trainingImageData, vectorizedTrainingLabels, trainingData);
+
 	net.setLayerSizes(networkSize);
 	//net.print();
 	vector<vector<double>> biases;
@@ -722,15 +745,13 @@ int main()
 	weights = net.setWeights(networkSize);
 	cout << "WEIGHTS ###";
 	//net.print(weights);
-	vector<vector<vector<double>>> trainingData;
-	vector<vector<double>> vectorizedLabels;
-	vectorizedLabels = net.vectorizeLabels(labels);
-	zip(allImageData, vectorizedLabels, trainingData);
+
 	//net.print(trainingData);
-	vector<vector<vector<double>>> sample;
+	//vector<vector<vector<double>>> sample;
 	//net.print(trainingData);
 	net.stochasticGradientDescent(trainingData, epochs, miniBatchSize,learningRate,trainingData, weights, biases);
 	//net.evalute();
+
 	//stochasticGradientDescent(const vector<vector<vector<double>>> &trainingData, int epochs, int miniBatchSize, int learningRate, const vector<vector<vector<double>>> &testData)
 	//net.print(net.vectorizeLabels(labels));
 	//net.print(trainingData);
