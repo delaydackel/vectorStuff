@@ -12,7 +12,10 @@ return randomDouble;
 }
 */
 double rngDouble() {
-	double x = ((double)rand() / (RAND_MAX));
+	std::random_device rd;     // only used once to initialise (seed) engine
+	std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
+	std::uniform_real_distribution<double> uni(-1, 1);
+	double x = uni(rng);//((double)rand() / (RAND_MAX));
 	return x;
 }
 int rngInt(int min, int max) {
