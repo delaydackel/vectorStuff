@@ -224,6 +224,7 @@ double sigmoid(double z)
 	return (1 / x);*/
 }
 double sigmoidPrime(double z) {
+	//cout << (sigmoid(z) * (1.0 - (sigmoid(z))));
 	return (sigmoid(z) * (1.0 - (sigmoid(z))));
 }
 vector<double> costDerivative(const vector<double> &outputActivations, const vector<double> &desiredOutput) //parameters: realOutput, desiredOutput
@@ -397,15 +398,16 @@ void network::backdrop(const int &miniBatchSize, const int &learningRate, vector
 	//feedforward()
 
 	feedforward(inWeights, inBiases, listOfActivations, weightedInputs, calculatedActivations); //calculates activations
-	listOfActivations[0] = calculatedActivations[0];
+	//listOfActivations[0] = calculatedActivations[0];
 	for (int i = 1; i < calculatedActivations.size(); i++) {
+		//listOfActivations[i] = calculatedActivations[i];
 		listOfActivations.push_back(calculatedActivations[i]);
 	}
 	//***backward pass***
-	getDesiredOutput(inWeights, inBiases, desiredOutput, listOfDesiredOutputs);
+	//getDesiredOutput(inWeights, inBiases, desiredOutput, listOfDesiredOutputs);
 	//get costs
 	//getErrors(listOfActivations, listOfDesiredOutputs, costs);// compare activations to desiredOutputs
-	getErrors(calculatedActivations, listOfDesiredOutputs, costs);// compare activations to desiredOutputs
+	//getErrors(calculatedActivations, listOfDesiredOutputs, costs);// compare activations to desiredOutputs
 	//secondToLast = myVector[myVector.size() - 2];
 
 	//get SigmoidPrime of Zs via Zs from last Layer to calculate derivative of costs ()
@@ -417,7 +419,8 @@ void network::backdrop(const int &miniBatchSize, const int &learningRate, vector
 	for (int i = 0; i < desiredOutput.size(); i++)
 	{
 		double nodeDelta;
-		nodeDelta = listOfActivations[listOfActivations.size() - 1][i] - desiredOutput[i] * sigmoidPrimeOfZ[sigmoidPrimeOfZ.size()-1][i];
+		//nodeDelta = (listOfActivations[listOfActivations.size() - 1][i] - desiredOutput[i]) * sigmoidPrimeOfZ[sigmoidPrimeOfZ.size()-1][i];
+		nodeDelta = (listOfActivations[listOfActivations.size() - 1][i] - desiredOutput[i]) * sigmoidPrimeOfZ[sigmoidPrimeOfZ.size() - 1][i];
 		deltaLastLayer.push_back(nodeDelta);
 	}
 	delta.push_back(deltaLastLayer);
@@ -435,11 +438,23 @@ void network::backdrop(const int &miniBatchSize, const int &learningRate, vector
 				weightTranspose.push_back(inWeights[i-2][k][j]);
 			}
 			layerWeightsTransposed.push_back(weightTranspose);
-
-		}
-		
+		}		
 		weightsTransposed.push_back(layerWeightsTransposed);
 	}
+	//get delta up to last layer
+	//delta = np.dot(self.weights[-l+1].transpose(), delta) * sp
+	for (int i = 0; i < listOfActivations.size()-1; i++)
+	{
+		vector<double> layerDelta;
+		for (int j = 0; j < listOfActivations[listOfActivations.size()-(i+2)].size(); j++)
+		{
+			double dp = 0;
+			dp = sumOfDotProduct(weightsTransposed[i][j],delta[delta.size()-(i+1)]);
+			layerDelta.push_back(dp* sigmoidPrimeOfZ[sigmoidPrimeOfZ.size() - (i + 2)][j]);
+		}
+		delta.insert(delta.begin(), layerDelta);
+	}
+	/*
 	for (int i = 0; i< calculatedActivations.size()-1; i++)
 	{
 		vector<double> layerDelta;
@@ -451,7 +466,7 @@ void network::backdrop(const int &miniBatchSize, const int &learningRate, vector
 		}
 		delta.insert(delta.begin(), layerDelta);
 	}
-	
+	*/
 	//nodeDelta = sumOfDotProduct(weightTranspose, delta[i])*sigmoidPrimeOfZ[1];
 	
 	//deltaOtherLayer = sumOfDotProduct(weights, delta[]);
@@ -518,7 +533,7 @@ void network::backdrop(const int &miniBatchSize, const int &learningRate, vector
 void network::updateMiniBatch(const vector<vector<double>> &dataSet, const int &miniBatchSize, vector<vector<double>> &biases, vector<vector<vector<double>>> &weights, int learningRate, vector<vector<double>> &nabla_biases, vector<vector<vector<double>>> &nabla_weights)
 {
 
-	for (int k = 0; k < miniBatchSize; k++) //muss noch minibatch_size werden
+	//for (int k = 0; k < miniBatchSize; k++) //muss noch minibatch_size werden
 	{
 		vector<vector<double>> delta_nabla_biases;
 		vector<vector<vector<double>>> delta_nabla_weights;
@@ -556,7 +571,7 @@ void network::updateMiniBatch(const vector<vector<double>> &dataSet, const int &
 			for (int j = 0; j < biases[i].size(); j++)
 			{
 				double blub;
-				blub = biases[i][j] - (5/*(learningRate / miniBatchSize)*/ * (delta_nabla_biases[i][j]));
+				blub = biases[i][j] - (0.5/*(learningRate / miniBatchSize)*/ * (delta_nabla_biases[i][j]));
 				newLayerBiases.push_back(blub);
 				//biases[i][j] = blub;
 			}
@@ -572,7 +587,7 @@ void network::updateMiniBatch(const vector<vector<double>> &dataSet, const int &
 				for (int k = 0; k < weights[i][j].size(); k++)
 				{
 					double blub;
-					blub = weights[i][j][k] - (5/*(learningRate / miniBatchSize)*/ * (delta_nabla_weights[i][j][k]));//w-(eta/length)*nablaW
+					blub = weights[i][j][k] - (0.5/*(learningRate / miniBatchSize)*/ * (delta_nabla_weights[i][j][k]));//w-(eta/length)*nablaW
 					newNodeWeights.push_back(blub);
 					//weights[i][j][k] = blub;
 				}
@@ -594,7 +609,13 @@ void generateMiniBatch(int miniBatchSize, const vector<vector<vector<double>>> &
 			cout << "yay"<< endl;
 		}
 		*/
-		outputBatch.push_back(inputData[j]);//pick random datasets from input
+		if ((posOfHighestElement(inputData[j][1]) == 0)||(posOfHighestElement(inputData[j][1]) == 1)) {
+			outputBatch.push_back(inputData[j]);//pick random datasets from input
+		}
+		else
+		{
+			i--;
+		}
 	}
 }
 void network::stochasticGradientDescent(const vector<vector<vector<double>>> &trainingData, double epochs, double miniBatchSize, double learningRate, const vector<vector<vector<double>>> &testData, vector<vector<vector<double>>>&weights, vector<vector<double>> &biases) {
@@ -654,12 +675,51 @@ void network::feedforward(const vector<vector<vector<double>>> &inWeights, const
 	for (int i = 0; i < weightedInputs[0].size(); i++)
 	{	
 		double blub=0;
-		blub = (weightedInputs[0][i] / 255);
+		blub = (weightedInputs[0][i]/255);
 		weightedInputs[0][i] = blub;
 		outActivations[0][i] = blub;
 	}
+
+	for (int i = 1; i < inBiases.size(); i++)
+	{
+		vector<double> weightedLayerInputs;
+		vector<double> layerActivations;
+		for (int j = 0; j < inBiases[i].size(); j++)
+		{
+			double weightedInput;
 	
+			weightedInput = sumOfDotProduct(outActivations[i-1], inWeights[i-1][j])+ inBiases[i-1][j];
+			weightedLayerInputs.push_back(weightedInput);
+
+		}
+		weightedInputs.push_back(weightedLayerInputs);
+		for (int j = 0; j < inBiases[i].size(); j++)
+		{
+			double nodeActivation;
+			nodeActivation = sigmoid(weightedInputs[i][j]);
+			layerActivations.push_back(nodeActivation);
+		}
+
+
+
+		outActivations.push_back(layerActivations);
+	}
+
+	//weighInputs
+	/*
+	for (int i = 0; i < inWeights.size(); i++)
+	{
+		vector<double> weightedLayerInputs;
+		for (int j = 0; j < inWeights[i].size(); j++)
+		{
+
+			weightedLayerInputs.push_back(weightInput(weightedInputs[i], inWeights[i][j], inBiases[i + 1][j]));
+
+		}
+		weightedInputs.push_back(weightedLayerInputs);
+	}*/
 	//activations first layer
+	/*
 	for (int i = 1; i < inBiases.size(); i++)
 	{
 		vector<double> layerActivations;
@@ -669,37 +729,18 @@ void network::feedforward(const vector<vector<vector<double>>> &inWeights, const
 			double nodeActivation=0;
 			//for (int k = 0; k < inWeights[i-1].size(); k++)
 			{				
-				nodeActivation = sigmoid(sumOfDotProduct(outActivations[i-1], inWeights[i-1][j]) + inBiases[i - 1][j]) ;
+				nodeActivation = sigmoid(weightedInputs[i][j]);//sumOfDotProduct(outActivations[i-1], inWeights[i-1][j]) + inBiases[i - 1][j]) ;
 				
 			}
 			//nodeActivation = nodeActivation + inBiases[i - 1][j];
 			layerActivations.push_back(nodeActivation);
 		}
 		outActivations.push_back(layerActivations);
-	}
+	}*/
 
 	//outActivations.push_back(weightedInputs[0]);
 	//split here in weighInputs() and activate()
-	//weighInputs
-	for (int i = 0; i < inWeights.size(); i++)
-	{
-		vector<double> weightedLayerInputs;
-		for (int j = 0; j < inWeights[i].size(); j++)
-		{
-			/*for (int k = 0; k<inWeights[i][j][k]; k++)
-			{
-				double blub;
-				blub += inWeights[i][j][k];
-			}*/
-			weightedLayerInputs.push_back(weightInput(outActivations[i], inWeights[i][j], inBiases[i+1][j]) );
-			/*
-			double z;
-			z = sumOfDotProduct(inWeights[i][j], outActivations[i]); //0 is falsch
-			weightedLayerInputs.push_back(z);
-			*/
-		}
-		weightedInputs.push_back(weightedLayerInputs);
-	}
+
 	//activate
 	/*
 	for (int i = 0; i < weightedInputs.size(); i++)
@@ -824,9 +865,40 @@ void network::getDelta(const vector<vector<double>> &costs, const vector<vector<
 	}
 }
 void network::getNablaWeights(const vector<vector<double>> &delta, const vector<vector<double>> &listOfActivations, vector<vector<vector<double>>> &nabla_weights) {
-	
-
-
+	//last layer
+	for (int i = 0; i < listOfActivations.size()-1; i++)
+	{
+		vector<vector<double>> bla;
+		for (int k = 0; k < delta[delta.size() - (i + 1)].size(); k++)
+		{
+			vector<double> blub;
+			double doener;
+			doener = sumOfDotProduct(delta[delta.size() - (i + 1)], listOfActivations[listOfActivations.size() - (i + 1)]);
+			for (int j = 0; j < listOfActivations[listOfActivations.size() - (i + 2)].size(); j++)
+			{
+				blub.push_back(doener);
+			}
+			bla.push_back(blub);
+		}
+		nabla_weights[nabla_weights.size()-(i+1)] = bla;
+	}
+	/*
+	for (int i = 0; i < delta.size()-1; i++)
+	{
+		vector<vector<double>> layerDelta;
+		for (int j = 0; j < delta[i+1].size(); j++)
+		{
+			vector<double> nodeDelta;
+			for (int k = 0; k < listOfActivations[i].size(); k++)
+			{
+				nodeDelta.push_back(delta[i][k]*listOfActivations[i+1][j]);
+			}
+			layerDelta.push_back(nodeDelta);
+		}
+		nabla_weights[i] = layerDelta;
+	}
+	*/
+	/*
 
 	for (int k = 0; k < delta.size()-1; k++)
 	{
@@ -841,7 +913,7 @@ void network::getNablaWeights(const vector<vector<double>> &delta, const vector<
 			deltaNode.push_back(deltaWeight);
 		}
 		nabla_weights[k]=deltaNode;
-	}
+	}*/
 	/*
 	for (int i = 0; i < 2; i++)
 	{
@@ -901,7 +973,7 @@ int main()
 {
 
 	double epochs = 5000;
-	double miniBatchSize =5;
+	double miniBatchSize =30;
 	double learningRate =2;
 	//vector<double> hyperParam{ epochs, miniBatchSize, learningRate };
 
