@@ -601,7 +601,7 @@ void generateMiniBatch(int miniBatchSize, const vector<vector<vector<double>>> &
 		}
 		*/
 		//outputBatch.push_back(inputData[j]);//pick random datasets from input
-		if ((posOfHighestElement(inputData[j][1]) == 0)||(posOfHighestElement(inputData[j][1]) == 8)) {
+		if ((posOfHighestElement(inputData[j][1]) == 0) || (posOfHighestElement(inputData[j][1]) == 1) || (posOfHighestElement(inputData[j][1]) == 2) || (posOfHighestElement(inputData[j][1]) == 3) || (posOfHighestElement(inputData[j][1]) == 4) || (posOfHighestElement(inputData[j][1]) == 5) || (posOfHighestElement(inputData[j][1]) == 6) || (posOfHighestElement(inputData[j][1]) == 7) || (posOfHighestElement(inputData[j][1]) == 8) || (posOfHighestElement(inputData[j][1]) == 9)) {
 			outputBatch.push_back(inputData[j]);//pick random datasets from input
 		}
 		else
@@ -1006,7 +1006,7 @@ void network::getNablaWeights(const vector<vector<double>> &delta, const vector<
 }
 void network::evaluate(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<vector<vector<double>>> &inputData) {
 	vector<vector<vector<double>>> testSample;
-	generateMiniBatch(50, inputData, testSample);
+	generateMiniBatch(100, inputData, testSample);
 	double numberOfSuccess=0;
 	for (int i = 0; i < testSample.size(); i++)
 	{	
@@ -1019,20 +1019,20 @@ void network::evaluate(const vector<vector<vector<double>>> &inWeights, const ve
 			numberOfSuccess++;
 		}
 	}
-	cout << "success rate: " << numberOfSuccess / 50<<endl;
+	cout << "success rate: " << numberOfSuccess / 100<<endl;
 }
 int main()
 {
 
 	double epochs = 5000;
-	double miniBatchSize =10;
-	double learningRate =3;
+	double miniBatchSize =100;
+	double learningRate =30;
 	//vector<double> hyperParam{ epochs, miniBatchSize, learningRate };
 
 	vector<vector<double>> trainingImageData;
-	ReadMNISTImages(10000, 784, trainingImageData);
+	ReadMNISTImages(60000, 784, trainingImageData);
 	vector<double> labels;
-	ReadMNISTLabels(10000, labels);
+	ReadMNISTLabels(60000, labels);
 	vector<int> networkSize;
 	networkSize = {784, 30, 10};// getNetworkSize();
 	network net{  };
