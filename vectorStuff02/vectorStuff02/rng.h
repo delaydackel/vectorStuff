@@ -1,6 +1,7 @@
 #pragma once
 #include <random>
 #include <iostream>
+#include <math.h>
 /*
 double rng() {
 double lower_bound = 0;
@@ -11,10 +12,10 @@ double randomDouble = unif(re);
 return randomDouble;
 }
 */
-double rngDouble() {
+double rngDouble(int dev) {
 	std::random_device rd;     // only used once to initialise (seed) engine
 	std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
-	std::uniform_real_distribution<double> uni(-1, 1);
+	std::uniform_real_distribution<double> uni(-(1 / sqrt(dev)), (1/sqrt(dev)));
 	double x = uni(rng);//((double)rand() / (RAND_MAX));
 	return x;
 }
