@@ -4,8 +4,10 @@
 #include "stdafx.h"
 #include "rng.h"
 #include "mnist_loader.h"
+//#include "loader.h"
 #include <vector>
 #include <string>
+#include <sstream>
 #include <iostream>
 #include <math.h>
 #include <algorithm>
@@ -26,6 +28,10 @@ public:
 	vector<double> getLayerBiases(vector<vector<double>> &biases, int layerNumber);
 	vector<double> getNeuronWeights(vector<vector<vector<double>>> &weights, int layerNumber, int neuronNumber);
 
+	bool promptLoad();
+	void load(vector<vector<double>> &biases, vector<vector<vector<double>>> &weights);
+	void save(const vector<vector<double>> &biases, const vector<vector<vector<double>>> &weights);
+	void log(double numberForLogging);
 	void print()
 	{
 		for (int i = 0; i < layerSizes.size(); i++)
@@ -93,6 +99,31 @@ public:
 			}
 
 		}*/
+	}
+	void printMnistNumber(vector<double> numberAsVector) {
+		int length = numberAsVector.size();
+		int rootOfLength = 0;
+		rootOfLength = int(sqrt(length));
+		for (int pos = 0; pos < length; pos++)
+		{
+			if (pos % rootOfLength  == 0)
+			{
+				cout << endl;
+			}
+			if (numberAsVector[pos]>=127)
+			{
+				cout<<"X";
+			}
+			else if ((numberAsVector[pos]<127)&&(numberAsVector[pos]>0))
+			{
+				cout << "x";
+			}
+			else
+			{
+				cout << " ";
+			}
+
+		}
 	}
 	void feedforward(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, vector<vector<double>> &inActivations, vector<vector<double>> &weightedInputs, vector<vector<double>> &outActivations);
 	void backdrop(const int &miniBatchSize,const int &learningRate, vector<double> &activationsFromPreviousLayer, vector<double> &desiredOutput, vector<vector<vector<double>>> &inWeights, vector<vector<double>> &inBiases, vector<vector<double>> &nabla_biases, vector<vector<vector<double>>> &nabla_weights);
@@ -174,7 +205,9 @@ vector<vector<double>> network::vectorizeLabels(const vector<double> &labels) {
 		{
 			label.push_back(0);					
 		}
-		label[labels[i]] = 1;
+		int index;
+		index = int(labels[i]);
+		label[index] = 1;
 		vectorizedLabels.push_back(label);
 	}
 	return vectorizedLabels;
@@ -196,6 +229,24 @@ int getIntInput() {
 		{
 			return x;// nope, so return our good x
 		}
+	}
+}
+bool network::promptLoad() {
+	string input ="";
+	
+	while (input != "c"&&input != "l")
+	{
+		cout << "(n)ew session or (l)oad last session?";
+		cin >> input;
+		if (input=="n")
+		{
+			return false;
+		}
+		else if (input=="l")
+		{
+			return true;
+		}
+		cout << endl;
 	}
 }
 vector<int> getNetworkSize() 
@@ -686,14 +737,18 @@ void network::stochasticGradientDescent(const vector<vector<vector<double>>> &tr
 		//cout << endl;
 		cout << "Epoch " << epoch << ":";
 		//cout << sumOfVec(biases[1]);
-		cout << endl;
-		print(biases[2]);
-		cout << endl;
-		cout << sumOfVec(biases[2]);
-		cout << endl;
+		//cout << endl;
+		//print(biases[2]);
+		//cout << endl;
+		//cout << sumOfVec(biases[2]);
+		//cout << endl;
 		//print(biases[3]);
 		cout << endl;
-		evaluate(weights, biases, trainingData);
+		if (epoch%10==0)
+		{
+			evaluate(weights, biases, testData);
+		}
+		
 	}
 	
 }
@@ -1006,8 +1061,10 @@ void network::getNablaWeights(const vector<vector<double>> &delta, const vector<
 }
 void network::evaluate(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<vector<vector<double>>> &inputData) {
 	vector<vector<vector<double>>> testSample;
-	generateMiniBatch(100, inputData, testSample);
+	int numberOfTests = 1;
+	generateMiniBatch(numberOfTests, inputData, testSample);
 	double numberOfSuccess=0;
+	save(inBiases, inWeights);
 	for (int i = 0; i < testSample.size(); i++)
 	{	
 		vector<vector<double>> result;
@@ -1018,31 +1075,142 @@ void network::evaluate(const vector<vector<vector<double>>> &inWeights, const ve
 			//cout << "isSame";
 			numberOfSuccess++;
 		}
+		if (i%numberOfTests ==0)
+		{
+			printMnistNumber(testSample[i][0]);
+			cout << endl;
+			cout << "= " << posOfHighestElement(blub[blub.size()-1]);
+			cout << endl;
+		}
 	}
-	cout << "success rate: " << numberOfSuccess / 100<<endl;
+	cout << "success rate: " << numberOfSuccess / numberOfTests <<endl;
+	
+	log((numberOfSuccess / numberOfTests));
+}
+void network::save(const vector<vector<double>> &biases, const vector<vector<vector<double>>> &weights) {
+	ofstream configuration;
+	configuration.open("C:\\temp\\mnist_source\\biases.csv");
+	configuration.precision(16);
+	//configuration.fill("0");
+	if (configuration.is_open())
+	{
+		for (int i = 0; i < biases.size(); i++)
+		{
+			for (int j = 0; j < biases[i].size(); j++)
+			{
+				configuration << biases[i][j];
+				configuration << ",";
+			}
+			configuration << "\n";
+		}
+		configuration.close();
+	}
+	configuration.open("C:\\temp\\mnist_source\\weights.csv");
+	configuration.precision(16);
+	//configuration.fill("0");
+	if (configuration.is_open())
+	{
+		for (int i = 0; i < weights.size(); i++)
+		{
+			for (int j = 0; j < weights[i].size(); j++)
+			{
+				for (int k = 0; k < weights[i][j].size(); k++)
+				{
+					configuration << weights[i][j][k];
+					configuration << ",";
+				}
+				configuration << "\n";
+			}
+		}
+		configuration.close();
+	}
+}
+void network::load(vector<vector<double>> &biases,  vector<vector<vector<double>>> &weights) {
+	vector<double> valueline;
+	string item;
+	ifstream configuration;
+	//load biases
+	configuration.open("C:\\temp\\mnist_source\\biases.csv");
+	for (int i = 0; i < biases.size(); i++)
+	{
+		string line;
+		getline(configuration, line);
+		istringstream in(line);
+
+		while (getline(in, item, ','))
+		{
+			valueline.push_back(atof(item.c_str()));
+		}
+		biases[i] = valueline;
+		valueline.clear();
+	}
+	configuration.close();
+
+	//load weights
+	configuration.open("C:\\temp\\mnist_source\\weights.csv");
+	for (int layerNumber = 0; layerNumber < weights.size(); layerNumber++)
+	{
+		for (int j = 0; j < weights[layerNumber].size(); j++)
+		{
+			string line;
+			getline(configuration, line);
+			istringstream in(line);
+			while (getline(in, item, ','))
+			{
+				valueline.push_back(atof(item.c_str()));
+			}
+
+			weights[layerNumber][j] = (valueline);
+			valueline.clear();
+		}
+	}
+	configuration.close();
+}
+void network::log(double numberForLogging) {
+	ofstream logfile;
+	logfile.open("C:\\temp\\mnist_source\\log.txt", std::ofstream::out | std::ofstream::app);
+	logfile.precision(16);
+	logfile << numberForLogging;
+	logfile << "\n";
 }
 int main()
 {
 
 	double epochs = 5000;
-	double miniBatchSize =100;
-	double learningRate =30;
+	double miniBatchSize =10;
+	double learningRate =3;
 	//vector<double> hyperParam{ epochs, miniBatchSize, learningRate };
 
 	vector<vector<double>> trainingImageData;
-	ReadMNISTImages(60000, 784, trainingImageData);
+	ReadMNISTImagesTraining(60000, 784, trainingImageData);
 	vector<double> labels;
-	ReadMNISTLabels(60000, labels);
+	ReadMNISTLabelsTraining(60000, labels);
+	vector<vector<double>> testImageData;
+	ReadMNISTImagesTest(10000, 784, testImageData);
+	vector<double> testLabels;
+	ReadMNISTLabelsTest(10000, testLabels);
 	vector<int> networkSize;
-	networkSize = {784, 30, 10};// getNetworkSize();
+	networkSize = {784, 50, 30, 10};// getNetworkSize();
 	network net{  };
 	vector<vector<vector<double>>> trainingData;
 	vector<vector<double>> vectorizedTrainingLabels;
 	vectorizedTrainingLabels = net.vectorizeLabels(labels);
 	zip(trainingImageData, vectorizedTrainingLabels, trainingData);
 
+	vector<vector<vector<double>>> testData;
+	vector<vector<double>> vectorizedTestLabels;
+	vectorizedTestLabels = net.vectorizeLabels(testLabels);
+	zip(testImageData, vectorizedTestLabels, testData);
+
 	net.setLayerSizes(networkSize);
 	//net.print();
+	trainingImageData.clear();
+	testImageData.clear();
+	labels.clear();
+	testLabels.clear();
+	vectorizedTestLabels.clear();
+	vectorizedTrainingLabels.clear();
+
 	vector<vector<double>> biases;
 	biases = net.generateBiases(networkSize);
 	//cout << "BIASES###";
@@ -1051,7 +1219,10 @@ int main()
 	weights = net.setWeights(networkSize);
 	//cout << "WEIGHTS ###";
 	//net.print(weights);
-
+	if (net.promptLoad())
+	{
+		net.load(biases, weights);
+	}
 	//net.print(trainingData);
 	//vector<vector<vector<double>>> sample;
 	//net.print(trainingData);
