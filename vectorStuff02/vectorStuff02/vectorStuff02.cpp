@@ -138,7 +138,7 @@ public:
 	void getDelta(const vector<vector<double>> &costs, const vector<vector<double>> &sigmoidPrimeOfZ, vector<vector<double>> &delta);
 	void getNablaWeights(const vector<vector<double>> &delta, const vector<vector<double>> &listOfActivations, vector<vector<vector<double>>> &nabla_weights);
 	void evaluate(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<vector<vector<double>>> &inputData);
-	
+	double sumOfDotProduct(const vector<double> &a, const vector<double> &b);
 
 };
 
@@ -387,7 +387,7 @@ vector<double> dotProduct(const vector<double> &a, const vector<double> &b) {
 	}
 	return results;
 }
-double sumOfDotProduct(const vector<double> &a, const vector<double> &b)
+double network::sumOfDotProduct(const vector<double> &a, const vector<double> &b)
 {
 	double x = 0;	
 	vector<double> sumVec;
@@ -1061,7 +1061,7 @@ void network::getNablaWeights(const vector<vector<double>> &delta, const vector<
 }
 void network::evaluate(const vector<vector<vector<double>>> &inWeights, const vector<vector<double>> &inBiases, const vector<vector<vector<double>>> &inputData) {
 	vector<vector<vector<double>>> testSample;
-	int numberOfTests = 1;
+	int numberOfTests = 100;
 	generateMiniBatch(numberOfTests, inputData, testSample);
 	double numberOfSuccess=0;
 	save(inBiases, inWeights);
@@ -1190,7 +1190,7 @@ int main()
 	vector<double> testLabels;
 	ReadMNISTLabelsTest(10000, testLabels);
 	vector<int> networkSize;
-	networkSize = {784, 50, 30, 10};// getNetworkSize();
+	networkSize = {784, 30, 10};// getNetworkSize();
 	network net{  };
 	vector<vector<vector<double>>> trainingData;
 	vector<vector<double>> vectorizedTrainingLabels;
